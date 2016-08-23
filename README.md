@@ -1,2 +1,2 @@
 # gobt
-A BitTorrent Service implemented by Golang.
+A BitTorrent Service based on https://github.com/shiyanhui/dht and https://github.com/btlike/repository .
