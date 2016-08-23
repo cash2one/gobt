@@ -20,6 +20,10 @@ func (a Files) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a Files) Less(i, j int) bool { return a[i].Length > a[j].Length }
 
 func storeTorrent(infohash string, data interface{}) (err error) {
+	if len(infohash) != 40 {
+		logger.Errorf("infohash[%v] len is not 40", infohash)
+		return
+	}
 
 	defer func() {
 		if e := recover(); e != nil {
@@ -40,12 +44,8 @@ func storeTorrent(infohash string, data interface{}) (err error) {
 			t.Name = name
 			if t.Name == "" {
 				logger.Error("store name len is 0")
+				return
 			}
-		}
-
-		// get infohash
-		if len(t.Infohash) != 40 {
-			logger.Error("store infohash len is not 40")
 		}
 
 		// get files

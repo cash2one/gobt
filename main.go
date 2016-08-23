@@ -23,10 +23,13 @@ type bitTorrent struct {
 
 func Start(config *dht.Config, w *dht.Wire) {
 	go func() {
+		var err error
 		for resp := range w.Response() {
 			hash := hex.EncodeToString(resp.InfoHash)
 			//HandleMetadata(resp.InfoHash, resp.IP, resp.Port, resp.MetadataInfo)
-			storeTorrent(hash, resp.MetadataInfo)
+			if err = storeTorrent(hash, resp.MetadataInfo); err != nil {
+				logger.Errorf("Failed to store the torrent[%v]: %v", hash, err)
+			}
 		}
 	}()
 	go w.Run()
