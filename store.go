@@ -19,7 +19,7 @@ func (a Files) Len() int           { return len(a) }
 func (a Files) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a Files) Less(i, j int) bool { return a[i].Length > a[j].Length }
 
-func storeTorrent(infohash string, data interface{}) (err error) {
+func storeTorrent(infohash string, metadatainfo []byte) (err error) {
 	if len(infohash) != 40 {
 		logger.Errorf("infohash[%v] len is not 40", infohash)
 		return
@@ -33,6 +33,13 @@ func storeTorrent(infohash string, data interface{}) (err error) {
 	}()
 
 	logger.Infof("Starting to store the torrent[%v]", infohash)
+
+	var data interface{}
+	data, err = dht.Decode(metadatainfo)
+	if err != nil {
+		logger.Errorf("Failed to decode the metadata info of the torrent[%v]", infohash)
+		return
+	}
 
 	if info, ok := data.(map[string]interface{}); ok {
 		var t repository.Torrent
@@ -83,6 +90,8 @@ func storeTorrent(infohash string, data interface{}) (err error) {
 
 		logger.Infof("Start to store the torrent[%v] into Mysql.", t.Infohash)
 		err = g.Repository.CreateTorrent(t)
+	} else {
+		logger.Warnf("Invalid data: %+v", data)
 	}
 
 	return
