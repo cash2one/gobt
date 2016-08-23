@@ -1,13 +1,10 @@
 package main
 
 import (
-	"encoding/hex"
-	"encoding/json"
-	"fmt"
-	"net/http"
-	_ "net/http/pprof"
+	"os"
 
 	"github.com/shiyanhui/dht"
+	"github.com/xgfone/gobt/g"
 )
 
 type file struct {
@@ -22,49 +19,6 @@ type bitTorrent struct {
 	Length   int    `json:"length,omitempty"`
 }
 
-func HandleMetadata(infohash []byte, ip string, port int, mi []byte) {
-	defer func() {
-		if err := recover(); err != nil {
-			fmt.Println(err)
-		}
-	}()
-
-	metadata, err := dht.Decode(mi)
-	if err != nil {
-		continue
-	}
-	info := metadata.(map[string]interface{})
-
-	if _, ok := info["name"]; !ok {
-		continue
-	}
-
-	bt := bitTorrent{
-		InfoHash: hex.EncodeToString(infohash),
-		Name:     info["name"].(string),
-	}
-
-	if v, ok := info["files"]; ok {
-		files := v.([]interface{})
-		bt.Files = make([]file, len(files))
-
-		for i, item := range files {
-			f := item.(map[string]interface{})
-			bt.Files[i] = file{
-				Path:   f["path"].([]interface{}),
-				Length: f["length"].(int),
-			}
-		}
-	} else if _, ok := info["length"]; ok {
-		bt.Length = info["length"].(int)
-	}
-
-	data, err := json.Marshal(bt)
-	if err == nil {
-		fmt.Printf("%s\n\n", data)
-	}
-}
-
 func Start(config *dht.Config, w *dht.Wire) {
 	go func() {
 		for resp := range w.Response() {
@@ -74,7 +28,7 @@ func Start(config *dht.Config, w *dht.Wire) {
 	}()
 	go w.Run()
 
-	config.OnAnnouncePeer = func(infoHash, ip string, port int) {
+	config.OnAnnouncePeer = func(infohash, ip string, port int) {
 		hash := []byte(infohash)
 
 		if !checkTorrent(hash) {
@@ -87,9 +41,7 @@ func Start(config *dht.Config, w *dht.Wire) {
 }
 
 func main() {
-	go func() {
-		http.ListenAndServe(":6060", nil)
-	}()
+	g.Init(os.Args[1])
 
 	config := dht.NewCrawlConfig()
 	w := dht.NewWire(65536, 1024, 1024)

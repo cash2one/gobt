@@ -2,12 +2,14 @@ package main
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"time"
 
 	"github.com/btlike/repository"
-	"github.com/xgfone/gobt/conf"
+	"github.com/shiyanhui/dht"
+	"github.com/xgfone/gobt/g"
 )
 
 type Files []repository.File
@@ -19,7 +21,7 @@ func (a Files) Less(i, j int) bool { return a[i].Length > a[j].Length }
 func storeTorrent(data interface{}, infohash []byte) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
-			err = e
+			err = fmt.Errorf("%v", e)
 		}
 	}()
 
@@ -74,7 +76,7 @@ func storeTorrent(data interface{}, infohash []byte) (err error) {
 			}
 		}
 
-		err = conf.Repository.CreateTorrent(t)
+		err = g.Repository.CreateTorrent(t)
 	}
 
 	return
@@ -89,7 +91,51 @@ func checkTorrent(infohash []byte) (ok bool) {
 
 	ok = true
 	Infohash := hex.EncodeToString(infohash)
-	if t, err := GetTorrentByInfohash(Infohash); err != nil || t.Infohash != Infohash {
+	if t, err := g.Repository.GetTorrentByInfohash(Infohash); err != nil || t.Infohash != Infohash {
 		ok = false
+	}
+	return
+}
+
+func HandleMetadata(infohash []byte, ip string, port int, mi []byte) {
+	defer func() {
+		if err := recover(); err != nil {
+			fmt.Println(err)
+		}
+	}()
+
+	metadata, err := dht.Decode(mi)
+	if err != nil {
+		return
+	}
+	info := metadata.(map[string]interface{})
+
+	if _, ok := info["name"]; !ok {
+		return
+	}
+
+	bt := bitTorrent{
+		InfoHash: hex.EncodeToString(infohash),
+		Name:     info["name"].(string),
+	}
+
+	if v, ok := info["files"]; ok {
+		files := v.([]interface{})
+		bt.Files = make([]file, len(files))
+
+		for i, item := range files {
+			f := item.(map[string]interface{})
+			bt.Files[i] = file{
+				Path:   f["path"].([]interface{}),
+				Length: f["length"].(int),
+			}
+		}
+	} else if _, ok := info["length"]; ok {
+		bt.Length = info["length"].(int)
+	}
+
+	data, err := json.Marshal(bt)
+	if err == nil {
+		fmt.Printf("%s\n\n", data)
 	}
 }
