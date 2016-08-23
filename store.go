@@ -91,7 +91,7 @@ func storeTorrent(infohash string, metadatainfo []byte) (err error) {
 		logger.Infof("Start to store the torrent[%v] into Mysql.", t.Infohash)
 		err = g.Repository.CreateTorrent(t)
 	} else {
-		logger.Warnf("Invalid data: %+v", data)
+		logger.Warnf("[%v] Invalid data", infohash)
 	}
 
 	return
