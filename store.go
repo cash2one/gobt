@@ -19,22 +19,22 @@ func (a Files) Len() int           { return len(a) }
 func (a Files) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a Files) Less(i, j int) bool { return a[i].Length > a[j].Length }
 
-func storeTorrent(data interface{}, infohash []byte) (err error) {
-	var t repository.Torrent
+func storeTorrent(infohash string, data interface{}) (err error) {
 
 	defer func() {
 		if e := recover(); e != nil {
-			logger.Errorf("Failed to store the torrent[%v]: %v", t.Infohash, e)
+			logger.Errorf("Failed to store the torrent[%v]: %v", infohash, e)
 			err = fmt.Errorf("%v", e)
 		}
 	}()
 
-	t.CreateTime = time.Now()
-	t.Infohash = hex.EncodeToString(infohash)
-
-	logger.Infof("Starting to store the torrent[%v]", t.Infohash)
+	logger.Infof("Starting to store the torrent[%v]", infohash)
 
 	if info, ok := data.(map[string]interface{}); ok {
+		var t repository.Torrent
+		t.CreateTime = time.Now()
+		t.Infohash = infohash
+
 		// get name
 		if name, ok := info["name"].(string); ok {
 			t.Name = name
@@ -87,17 +87,16 @@ func storeTorrent(data interface{}, infohash []byte) (err error) {
 	return
 }
 
-func checkTorrent(infohash []byte) (ok bool) {
+func checkTorrent(infohash string) (ok bool) {
 	defer func() {
 		if err := recover(); err != nil {
-			logger.Errorf("Failed to check the torrent[%v]: %v", string(infohash), err)
+			logger.Errorf("Failed to check the torrent[%v]: %v", infohash, err)
 			ok = false
 		}
 	}()
 
 	ok = true
-	Infohash := hex.EncodeToString(infohash)
-	if t, err := g.Repository.GetTorrentByInfohash(Infohash); err != nil || t.Infohash != Infohash {
+	if t, err := g.Repository.GetTorrentByInfohash(infohash); err != nil || t.Infohash != infohash {
 		ok = false
 	}
 	return

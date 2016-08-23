@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/hex"
 	"os"
 
 	"github.com/shiyanhui/dht"
@@ -23,19 +24,20 @@ type bitTorrent struct {
 func Start(config *dht.Config, w *dht.Wire) {
 	go func() {
 		for resp := range w.Response() {
+			hash := hex.EncodeToString(resp.InfoHash)
 			//HandleMetadata(resp.InfoHash, resp.IP, resp.Port, resp.MetadataInfo)
-			storeTorrent(resp.InfoHash, resp.MetadataInfo)
+			storeTorrent(hash, resp.MetadataInfo)
 		}
 	}()
 	go w.Run()
 
 	config.OnAnnouncePeer = func(infohash, ip string, port int) {
-		logger.Infof("Announce %v on %v:%v", infohash, ip, port)
+		infoHash := []byte(infohash)
 
-		hash := []byte(infohash)
-
+		hash := hex.EncodeToString(infoHash)
+		logger.Infof("Announce %v on %v:%v", hash, ip, port)
 		if !checkTorrent(hash) {
-			w.Request(hash, ip, port)
+			w.Request(infoHash, ip, port)
 		}
 	}
 
