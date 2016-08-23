@@ -10,6 +10,7 @@ import (
 	"github.com/btlike/repository"
 	"github.com/shiyanhui/dht"
 	"github.com/xgfone/gobt/g"
+	"github.com/xgfone/gobt/logger"
 )
 
 type Files []repository.File
@@ -19,28 +20,32 @@ func (a Files) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a Files) Less(i, j int) bool { return a[i].Length > a[j].Length }
 
 func storeTorrent(data interface{}, infohash []byte) (err error) {
+	var t repository.Torrent
+
 	defer func() {
 		if e := recover(); e != nil {
+			logger.Errorf("Failed to store the torrent[%v]: %v", t.Infohash, e)
 			err = fmt.Errorf("%v", e)
 		}
 	}()
 
-	if info, ok := data.(map[string]interface{}); ok {
-		var t repository.Torrent
-		t.CreateTime = time.Now()
+	t.CreateTime = time.Now()
+	t.Infohash = hex.EncodeToString(infohash)
 
+	logger.Infof("Starting to store the torrent[%v]", t.Infohash)
+
+	if info, ok := data.(map[string]interface{}); ok {
 		// get name
 		if name, ok := info["name"].(string); ok {
 			t.Name = name
 			if t.Name == "" {
-				return fmt.Errorf("store name len is 0")
+				logger.Error("store name len is 0")
 			}
 		}
 
 		// get infohash
-		t.Infohash = hex.EncodeToString(infohash)
 		if len(t.Infohash) != 40 {
-			return fmt.Errorf("store infohash len is not 40")
+			logger.Error("store infohash len is not 40")
 		}
 
 		// get files
@@ -85,6 +90,7 @@ func storeTorrent(data interface{}, infohash []byte) (err error) {
 func checkTorrent(infohash []byte) (ok bool) {
 	defer func() {
 		if err := recover(); err != nil {
+			logger.Errorf("Failed to check the torrent[%v]: %v", string(infohash), err)
 			ok = false
 		}
 	}()
@@ -100,7 +106,7 @@ func checkTorrent(infohash []byte) (ok bool) {
 func HandleMetadata(infohash []byte, ip string, port int, mi []byte) {
 	defer func() {
 		if err := recover(); err != nil {
-			fmt.Println(err)
+			logger.Error(err)
 		}
 	}()
 
@@ -136,6 +142,6 @@ func HandleMetadata(infohash []byte, ip string, port int, mi []byte) {
 
 	data, err := json.Marshal(bt)
 	if err == nil {
-		fmt.Printf("%s\n\n", data)
+		logger.Infof("%s\n\n", data)
 	}
 }

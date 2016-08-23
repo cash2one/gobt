@@ -5,6 +5,7 @@ import (
 
 	"github.com/shiyanhui/dht"
 	"github.com/xgfone/gobt/g"
+	"github.com/xgfone/gobt/logger"
 )
 
 type file struct {
@@ -29,6 +30,8 @@ func Start(config *dht.Config, w *dht.Wire) {
 	go w.Run()
 
 	config.OnAnnouncePeer = func(infohash, ip string, port int) {
+		logger.Infof("Announce %v on %v:%v", infohash, ip, port)
+
 		hash := []byte(infohash)
 
 		if !checkTorrent(hash) {
@@ -37,6 +40,8 @@ func Start(config *dht.Config, w *dht.Wire) {
 	}
 
 	d := dht.New(config)
+
+	logger.Info("Start Bt ...")
 	d.Run()
 }
 
