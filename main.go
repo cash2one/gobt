@@ -29,6 +29,8 @@ func Start(config *dht.Config, w *dht.Wire) {
 			//HandleMetadata(resp.InfoHash, resp.IP, resp.Port, resp.MetadataInfo)
 			if err = storeTorrent(hash, resp.MetadataInfo); err != nil {
 				logger.Errorf("Failed to store the torrent[%v]: %v", hash, err)
+			} else {
+				logger.Infof("Successfully store the torrent[%v]", hash)
 			}
 		}
 	}()

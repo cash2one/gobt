@@ -81,6 +81,7 @@ func storeTorrent(infohash string, data interface{}) (err error) {
 			}
 		}
 
+		logger.Infof("Start to store the torrent[%v] into Mysql.", t.Infohash)
 		err = g.Repository.CreateTorrent(t)
 	}
 
