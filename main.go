@@ -3,47 +3,49 @@ package main
 import (
 	"encoding/hex"
 	"os"
+	"strings"
 
 	"github.com/shiyanhui/dht"
 	"github.com/xgfone/gobt/g"
 	"github.com/xgfone/gobt/logger"
 )
 
-type file struct {
-	Path   []interface{} `json:"path"`
-	Length int           `json:"length"`
-}
-
-type bitTorrent struct {
-	InfoHash string `json:"infohash"`
-	Name     string `json:"name"`
-	Files    []file `json:"files,omitempty"`
-	Length   int    `json:"length,omitempty"`
-}
-
 func Start(config *dht.Config, w *dht.Wire) {
 	go func() {
-		var err error
 		for resp := range w.Response() {
-			hash := hex.EncodeToString(resp.InfoHash)
-			//HandleMetadata(resp.InfoHash, resp.IP, resp.Port, resp.MetadataInfo)
-			if err = storeTorrent(hash, resp.MetadataInfo); err != nil {
-				logger.Errorf("Failed to store the torrent[%v]: %v", hash, err)
-			} else {
-				logger.Infof("Successfully store the torrent[%v]", hash)
-			}
+			go func(resp dht.Response) {
+				var err error
+				hash := hex.EncodeToString(resp.InfoHash)
+				//HandleMetadata(resp.InfoHash, resp.IP, resp.Port, resp.MetadataInfo)
+				if err = storeTorrent(hash, resp.MetadataInfo); err != nil {
+					logger.Errorf("Failed to store the torrent[%v]: %v", hash, err)
+				} else {
+					logger.Infof("Successfully store the torrent[%v]", hash)
+				}
+			}(resp)
 		}
 	}()
 	go w.Run()
 
 	config.OnAnnouncePeer = func(infohash, ip string, port int) {
-		infoHash := []byte(infohash)
+		go func(infohash, ip string, port int) {
+			infoHash := []byte(infohash)
 
-		hash := hex.EncodeToString(infoHash)
-		logger.Infof("Announce %v on %v:%v", hash, ip, port)
-		if !checkTorrent(hash) {
-			w.Request(infoHash, ip, port)
-		}
+			hash := hex.EncodeToString(infoHash)
+			if len(hash) != 40 {
+				logger.Warnf("infohash is invalid: %v", hash)
+				return
+			} else {
+				hash = strings.ToLower(hash)
+			}
+			logger.Infof("Announce %v on %v:%v", hash, ip, port)
+
+			if !checkTorrent(hash) {
+				w.Request(infoHash, ip, port)
+			} else {
+				increaseResourceHeat(hash)
+			}
+		}(infohash, ip, port)
 	}
 
 	d := dht.New(config)

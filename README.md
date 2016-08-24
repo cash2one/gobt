@@ -11,6 +11,7 @@ $ go install github.com/xgfone/gobt
 ### Deployment
 1. Create the mysql database.
 2. Import the table into the database. See `mysql.sql`.
+3. Download and deploy the elasticsearch. See http://www.elasticsearch.org/.
 3. Modify the configuration file.
 4. Start the program.
 

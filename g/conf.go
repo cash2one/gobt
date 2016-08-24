@@ -7,14 +7,17 @@ import (
 
 	"github.com/btlike/repository"
 	"github.com/xgfone/gobt/logger"
+	"gopkg.in/olivere/elastic.v3"
 )
 
 var (
-	Repository repository.Repository
-	Conf       Config
+	ElasticClient *elastic.Client
+	Repository    repository.Repository
+	Conf          Config
 )
 
 type Config struct {
+	Elastic  string `json:"elastic"`
 	Database string `json:"db"`
 	LogFile  string `json:"logfile"`
 	LogLevel string `json:"loglevel"`
@@ -37,6 +40,13 @@ func Init(config_file string) {
 		panic(err)
 	} else {
 		Repository = repo
+	}
+
+	if client, err := elastic.NewClient(elastic.SetURL(Conf.Elastic)); err != nil {
+		panic(err)
+	} else {
+		ElasticClient = client
+		//ElasticClient.CreateIndex("torrent").Do()
 	}
 
 	if _logger, err := logger.NewLogger(Conf.LogLevel, Conf.LogFile); err != nil {

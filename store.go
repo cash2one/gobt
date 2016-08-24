@@ -1,10 +1,10 @@
 package main
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/btlike/repository"
@@ -18,6 +18,13 @@ type Files []repository.File
 func (a Files) Len() int           { return len(a) }
 func (a Files) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a Files) Less(i, j int) bool { return a[i].Length > a[j].Length }
+
+type torrentSearch struct {
+	Name       string
+	Length     int64
+	Heat       int64
+	CreateTime time.Time
+}
 
 func storeTorrent(infohash string, metadatainfo []byte) (err error) {
 	if len(infohash) != 40 {
@@ -90,6 +97,15 @@ func storeTorrent(infohash string, metadatainfo []byte) (err error) {
 
 		logger.Infof("Start to store the torrent[%v] into Mysql.", t.Infohash)
 		err = g.Repository.CreateTorrent(t)
+		if err == nil {
+			data := torrentSearch{
+				Name:       t.Name,
+				Length:     t.Length,
+				CreateTime: time.Now(),
+			}
+			indexType := strings.ToLower(string(t.Infohash[0]))
+			g.ElasticClient.Index().Index("torrent").Type(indexType).Id(t.Infohash).BodyJson(data).Refresh(false).Do()
+		}
 	} else {
 		logger.Warnf("[%v] Invalid data", infohash)
 	}
@@ -112,45 +128,20 @@ func checkTorrent(infohash string) (ok bool) {
 	return
 }
 
-func HandleMetadata(infohash []byte, ip string, port int, mi []byte) {
-	defer func() {
-		if err := recover(); err != nil {
-			logger.Error(err)
-		}
-	}()
-
-	metadata, err := dht.Decode(mi)
-	if err != nil {
-		return
-	}
-	info := metadata.(map[string]interface{})
-
-	if _, ok := info["name"]; !ok {
-		return
-	}
-
-	bt := bitTorrent{
-		InfoHash: hex.EncodeToString(infohash),
-		Name:     info["name"].(string),
-	}
-
-	if v, ok := info["files"]; ok {
-		files := v.([]interface{})
-		bt.Files = make([]file, len(files))
-
-		for i, item := range files {
-			f := item.(map[string]interface{})
-			bt.Files[i] = file{
-				Path:   f["path"].([]interface{}),
-				Length: f["length"].(int),
+func increaseResourceHeat(key string) {
+	indexType := strings.ToLower(string(key[0]))
+	searchResult, err := g.ElasticClient.Get().Index("torrent").Type(indexType).Id(key).Do()
+	if err == nil && searchResult != nil && searchResult.Source != nil {
+		var tdata torrentSearch
+		err = json.Unmarshal(*searchResult.Source, &tdata)
+		if err == nil {
+			tdata.Heat++
+			_, err = g.ElasticClient.Index().Index("torrent").Type(indexType).Id(key).BodyJson(tdata).Refresh(false).Do()
+			if err != nil {
+				logger.Warnf("Failed to increase the heat of the torrent[%v]: %v", key, err)
 			}
+		} else {
+			logger.Warnf("Failed to increase the heat of the torrent[%v]: %v", key, err)
 		}
-	} else if _, ok := info["length"]; ok {
-		bt.Length = info["length"].(int)
-	}
-
-	data, err := json.Marshal(bt)
-	if err == nil {
-		logger.Infof("%s\n\n", data)
 	}
 }
