@@ -7,7 +7,6 @@ import (
 
 	"github.com/shiyanhui/dht"
 	"github.com/xgfone/gobt/g"
-	"github.com/xgfone/gobt/logger"
 )
 
 func Start(config *dht.Config, w *dht.Wire) {
@@ -18,9 +17,9 @@ func Start(config *dht.Config, w *dht.Wire) {
 				hash := hex.EncodeToString(resp.InfoHash)
 				//HandleMetadata(resp.InfoHash, resp.IP, resp.Port, resp.MetadataInfo)
 				if err = storeTorrent(hash, resp.MetadataInfo); err != nil {
-					logger.Errorf("Failed to store the torrent[%v]: %v", hash, err)
+					g.Logger.Error("Failed to store the torrent", "infohash", hash, "err", err)
 				} else {
-					logger.Infof("Successfully store the torrent[%v]", hash)
+					g.Logger.Info("Successfully store the torrent", "infohash", hash)
 				}
 			}(resp)
 		}
@@ -33,12 +32,12 @@ func Start(config *dht.Config, w *dht.Wire) {
 
 			hash := hex.EncodeToString(infoHash)
 			if len(hash) != 40 {
-				logger.Warnf("infohash is invalid: %v", hash)
+				g.Logger.Warn("infohash is invalid", "infohash", hash)
 				return
 			} else {
 				hash = strings.ToLower(hash)
 			}
-			logger.Infof("Announce %v on %v:%v", hash, ip, port)
+			g.Logger.Info("OnAnnouncePeer", "infohash", hash, "ip", ip, "port", port)
 
 			if !checkTorrent(hash) {
 				w.Request(infoHash, ip, port)
@@ -50,7 +49,7 @@ func Start(config *dht.Config, w *dht.Wire) {
 
 	d := dht.New(config)
 
-	logger.Info("Start Bt ...")
+	g.Logger.Info("Start Bt Service")
 	d.Run()
 }
 

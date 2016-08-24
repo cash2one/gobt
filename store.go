@@ -10,7 +10,6 @@ import (
 	"github.com/btlike/repository"
 	"github.com/shiyanhui/dht"
 	"github.com/xgfone/gobt/g"
-	"github.com/xgfone/gobt/logger"
 )
 
 type Files []repository.File
@@ -28,23 +27,23 @@ type torrentSearch struct {
 
 func storeTorrent(infohash string, metadatainfo []byte) (err error) {
 	if len(infohash) != 40 {
-		logger.Errorf("infohash[%v] len is not 40", infohash)
+		g.Logger.Error("infohash len is not 40", "infohash", infohash)
 		return
 	}
 
 	defer func() {
 		if e := recover(); e != nil {
-			logger.Errorf("Failed to store the torrent[%v]: %v", infohash, e)
+			g.Logger.Error("Failed to store the torrent", "infohash", infohash, "err", e)
 			err = fmt.Errorf("%v", e)
 		}
 	}()
 
-	logger.Infof("Starting to store the torrent[%v]", infohash)
+	g.Logger.Info("Starting to store the torrent", "infohash", infohash)
 
 	var data interface{}
 	data, err = dht.Decode(metadatainfo)
 	if err != nil {
-		logger.Errorf("Failed to decode the metadata info of the torrent[%v]", infohash)
+		g.Logger.Error("Failed to decode the metadata info of the torrent", "infohash", infohash)
 		return
 	}
 
@@ -57,7 +56,7 @@ func storeTorrent(infohash string, metadatainfo []byte) (err error) {
 		if name, ok := info["name"].(string); ok {
 			t.Name = name
 			if t.Name == "" {
-				logger.Error("store name len is 0")
+				g.Logger.Error("store name len is 0", "infohash", infohash)
 				return
 			}
 		}
@@ -95,7 +94,7 @@ func storeTorrent(infohash string, metadatainfo []byte) (err error) {
 			}
 		}
 
-		logger.Infof("Start to store the torrent[%v] into Mysql.", t.Infohash)
+		g.Logger.Info("Start to store the torrent into Mysql.", "infohash", t.Infohash)
 		err = g.Repository.CreateTorrent(t)
 		if err == nil {
 			data := torrentSearch{
@@ -107,7 +106,7 @@ func storeTorrent(infohash string, metadatainfo []byte) (err error) {
 			g.ElasticClient.Index().Index("torrent").Type(indexType).Id(t.Infohash).BodyJson(data).Refresh(false).Do()
 		}
 	} else {
-		logger.Warnf("[%v] Invalid data", infohash)
+		g.Logger.Warn("Invalid data", "infohash", infohash)
 	}
 
 	return
@@ -116,7 +115,7 @@ func storeTorrent(infohash string, metadatainfo []byte) (err error) {
 func checkTorrent(infohash string) (ok bool) {
 	defer func() {
 		if err := recover(); err != nil {
-			logger.Errorf("Failed to check the torrent[%v]: %v", infohash, err)
+			g.Logger.Error("Failed to check the torrent", "infohash", infohash, "err", err)
 			ok = false
 		}
 	}()
@@ -138,10 +137,10 @@ func increaseResourceHeat(key string) {
 			tdata.Heat++
 			_, err = g.ElasticClient.Index().Index("torrent").Type(indexType).Id(key).BodyJson(tdata).Refresh(false).Do()
 			if err != nil {
-				logger.Warnf("Failed to increase the heat of the torrent[%v]: %v", key, err)
+				g.Logger.Warn("Failed to increase the heat of the torrent", "infohash", key, "err", err)
 			}
 		} else {
-			logger.Warnf("Failed to increase the heat of the torrent[%v]: %v", key, err)
+			g.Logger.Warn("Failed to increase the heat of the torrent", "infohash", key, "err", err)
 		}
 	}
 }
