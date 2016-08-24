@@ -2,15 +2,40 @@ package logger
 
 import (
 	"fmt"
+	"io"
 	"os"
 
 	log "github.com/inconshreveable/log15"
+	"github.com/xgfone/go-tools/log/handler"
 )
 
 var Logger log.Logger
 
 func init() {
 	Logger, _ = NewLogger("info", "")
+}
+
+type closingHandler struct {
+	io.WriteCloser
+	log.Handler
+}
+
+func (h *closingHandler) Close() error {
+	return h.WriteCloser.Close()
+}
+
+func TimedRotatingFileHandler(fmtr log.Format, filename string, backupCount, interval int) (h log.Handler, err error) {
+	defer func() {
+		if _err := recover(); _err != nil {
+			err = _err.(error)
+			return
+		}
+	}()
+
+	_h := handler.NewTimedRotatingFile(filename)
+	_h.SetBackupCount(backupCount).SetInterval(interval)
+
+	return closingHandler{_h, log.StreamHandler(_h, fmtr)}, nil
 }
 
 func NewLogger(level, filepath string) (logger log.Logger, err error) {
@@ -28,12 +53,13 @@ func NewLogger(level, filepath string) (logger log.Logger, err error) {
 	if filepath == "" {
 		handler = log.StreamHandler(os.Stderr, log.LogfmtFormat())
 	} else {
-		handler, err = log.FileHandler(filepath, log.LogfmtFormat())
+		handler, err = TimedRotatingFileHandler(log.LogfmtFormat(), filepath, 31, 1)
+		// handler, err = log.FileHandler(filepath, log.LogfmtFormat())
 		if err != nil {
 			return
 		}
 	}
-	handler = log.SyncHandler(handler)
+	// handler = log.SyncHandler(handler)
 
 	//shandler := log.CallerFuncHandler(handler)
 	shandler := log.CallerFileHandler(handler)
