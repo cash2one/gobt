@@ -138,9 +138,13 @@ func increaseResourceHeat(key string) {
 			_, err = g.ElasticClient.Index().Index("torrent").Type(indexType).Id(key).BodyJson(tdata).Refresh(false).Do()
 			if err != nil {
 				g.Logger.Warn("Failed to increase the heat of the torrent", "infohash", key, "err", err)
+			} else {
+				g.Logger.Info("Successfully increase the heat", "infohash", key)
 			}
 		} else {
 			g.Logger.Warn("Failed to increase the heat of the torrent", "infohash", key, "err", err)
 		}
+	} else {
+		g.Logger.Info("Don't increase the heat", "infohash", key)
 	}
 }
