@@ -44,8 +44,12 @@ func Init(config_file string) {
 
 	if ElasticClient, err = elastic.NewClient(elastic.SetURL(Conf.Elastic)); err != nil {
 		panic(err)
-	} else {
-		ElasticClient.CreateIndex("torrent").Do()
+	} else if exists, err := ElasticClient.IndexExists("torrent").Do(); err != nil {
+		panic(err)
+	} else if !exists {
+		if _, err := ElasticClient.CreateIndex("torrent").Do(); err != nil {
+			panic(err)
+		}
 	}
 
 	if Logger, err = logger.NewLogger(Conf.LogLevel, Conf.LogFile); err != nil {

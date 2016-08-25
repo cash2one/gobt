@@ -1,4 +1,4 @@
-package main
+package store
 
 import (
 	"encoding/json"
@@ -25,7 +25,7 @@ type torrentSearch struct {
 	CreateTime time.Time
 }
 
-func storeTorrent(infohash string, metadatainfo []byte) (err error) {
+func StoreTorrent(infohash string, metadatainfo []byte) (err error) {
 	if len(infohash) != 40 {
 		g.Logger.Error("infohash len is not 40", "infohash", infohash)
 		return
@@ -112,7 +112,7 @@ func storeTorrent(infohash string, metadatainfo []byte) (err error) {
 	return
 }
 
-func checkTorrent(infohash string) (ok bool) {
+func CheckTorrent(infohash string) (ok bool) {
 	defer func() {
 		if err := recover(); err != nil {
 			g.Logger.Error("Failed to check the torrent", "infohash", infohash, "err", err)
@@ -127,7 +127,7 @@ func checkTorrent(infohash string) (ok bool) {
 	return
 }
 
-func increaseResourceHeat(key string) {
+func IncreaseResourceHeat(key string) {
 	indexType := strings.ToLower(string(key[0]))
 	searchResult, err := g.ElasticClient.Get().Index("torrent").Type(indexType).Id(key).Do()
 	if err == nil && searchResult != nil && searchResult.Source != nil {

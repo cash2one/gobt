@@ -7,6 +7,7 @@ import (
 
 	"github.com/shiyanhui/dht"
 	"github.com/xgfone/gobt/g"
+	"github.com/xgfone/gobt/store"
 )
 
 func Start(config *dht.Config, w *dht.Wire) {
@@ -16,7 +17,7 @@ func Start(config *dht.Config, w *dht.Wire) {
 				var err error
 				hash := hex.EncodeToString(resp.InfoHash)
 				//HandleMetadata(resp.InfoHash, resp.IP, resp.Port, resp.MetadataInfo)
-				if err = storeTorrent(hash, resp.MetadataInfo); err != nil {
+				if err = store.StoreTorrent(hash, resp.MetadataInfo); err != nil {
 					g.Logger.Error("Failed to store the torrent", "infohash", hash, "err", err)
 				} else {
 					g.Logger.Info("Successfully store the torrent", "infohash", hash)
@@ -39,10 +40,10 @@ func Start(config *dht.Config, w *dht.Wire) {
 			}
 			g.Logger.Info("OnAnnouncePeer", "infohash", hash, "ip", ip, "port", port)
 
-			if !checkTorrent(hash) {
+			if !store.CheckTorrent(hash) {
 				w.Request(infoHash, ip, port)
 			} else {
-				increaseResourceHeat(hash)
+				store.IncreaseResourceHeat(hash)
 			}
 		}(infohash, ip, port)
 	}
