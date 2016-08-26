@@ -5,7 +5,7 @@ A BitTorrent Service based on https://github.com/shiyanhui/dht and https://githu
 ### Installation
 ```
 $ go get -u github.com/xgfone/gobt
-$ go install github.com/xgfone/gobt
+$ go install github.com/xgfone/gobt/cmd/btspider
 ```
 
 ### Deployment
@@ -17,7 +17,7 @@ $ go install github.com/xgfone/gobt
 
 ### Run
 ```
-$ gobt /PATH/TO/bt.conf
+$ btspider /PATH/TO/bt.conf
 ```
 
 ### Notice
