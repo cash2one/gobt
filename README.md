@@ -24,3 +24,6 @@ $ btspider /PATH/TO/bt.conf
 1. The logfile is eithor an absolute or a relative path.
 2. The level of the logger is one of debug, info, warn, error, crit.
 3. It uses GORM as the DB ORM, so for the connection of DB, see [GORM](https://github.com/jinzhu/gorm).
+
+## Screenshot
+![screenshot](./screenshot.png)
